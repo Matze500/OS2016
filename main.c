@@ -6,6 +6,9 @@
 
 #define  PROGRAMM "./writer"
 
+
+
+
 int main (void) {
    pid_t pid;
    switch (pid = fork ()) {
