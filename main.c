@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
+
 #define  PROGRAMM "./writerr"
 
 int main (int argc,char **argv) {
