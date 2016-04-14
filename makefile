@@ -1,13 +1,10 @@
 all: program writer
 
 program: main.o
-		gcc -o program main.o
-
-main.o: main.c
-		gcc -c main.c
+	gcc -o program main.o
 
 writer: writer.o
-		gcc -o writer writer.o
+	gcc -o writer writer.o
 
-writer.o: writer.c
-		gcc -c writer.c
+%.o: %.c
+	gcc -Wall -Wextra -Wconversion -m64 -g -c $<
