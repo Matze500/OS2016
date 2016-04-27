@@ -1,45 +1,85 @@
 /* main.c */
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/wait.h>
 
+#include "main.h"
 
-#define  PROGRAMM "./writerr"
+#define  PROGRAMM "./writer"
 
 int main (int argc,char **argv) {
-   pid_t pid;
-   switch (pid = fork ()) {
-   case -1:
-     printf("\n%s\n",strerror(errno));
+
+  if(argc != 2)
+    {
+      printf("Usage: %s count\n", argv[0]);
       return EXIT_FAILURE;
-      break;
-   case 0:
-      sleep (5);   /* Kurze Pause */
-      printf ("--- Im Kindprozess ---\n");
-      int execerr = execlp (PROGRAMM, PROGRAMM, "Hallo", "Welt", NULL);
-      if(execerr == -1)
-      {
-	printf("Error: %s\n",strerror(errno));
-	return EXIT_FAILURE;
-      }
-      sleep(10); /*Wird nie erreicht wenn execlp ausgefuehrt wird*/
-      printf ("--- Kindprozess Ende ---\n");
-      break;
-   default:
-      printf ("--- Im Elternprozess ---\n");
-      printf ("--- Warte auf Kind %d ---\n",pid);
-      pid_t error = waitpid(pid,NULL,0);
+    }
+
+  int processcount = atoi(argv[1]);
+
+  if(processcount == 0)
+    {
+      printf("%s is not a valid number\n", argv[1]);
+      return EXIT_FAILURE;
+    }
+
+  int i;
+  
+  for(i = 0; i < processcount; i++)
+    {
+      sleep(3);
+      pid_t newpid = fork();
+
+      if(newpid == -1)
+	{
+	  printf("\n%s\n", strerror(errno));
+	  return EXIT_FAILURE;
+	}
+      else if(newpid == 0)
+	{
+	  //Kindprozess
+	  return childroutine();
+	}
+      else
+	{
+	  printf("--- Elternprozess ---\n");
+	  printf("Add pid: %d\n",newpid);
+	  int x = listadd(newpid);
+	  if(x != 0)
+	    {
+	      //Element konnte nicht hinzugefuegt werden.
+	      return EXIT_FAILURE;
+	    }
+	}
+    }
+
+  while(listcount() != 0)
+    {
+      pid_t first = listgetfirst();
+      if(first == -1)
+	break;
+
+      printf("--- Elternprozess ---\n");
+      printf("Wait for pid: %d\n",first);
+      
+      pid_t error = waitpid(first,NULL,0);
       if(error == -1)
-      {
-	printf("\n%s\n",strerror(errno));
-	return EXIT_FAILURE;
-      }
-      printf("--- Elternprozess Ende ---\n");
-      break;
-   }
-   return EXIT_SUCCESS;
+	{
+	  printf("\n%s\n",strerror(errno));
+	  return EXIT_FAILURE;
+	}
+      listdelete(first);
+    }
+  
+  return EXIT_SUCCESS;
+}
+
+int childroutine()
+{
+  sleep(5);
+  printf("--- Kindprozess ---\n");
+  int execerr = execlp (PROGRAMM, PROGRAMM, "Hallo", "Welt", NULL);
+  if(execerr == -1)
+    {
+      printf("Error: %s\n",strerror(errno));
+      return EXIT_FAILURE;
+    }
+  return EXIT_SUCCESS;
 }
