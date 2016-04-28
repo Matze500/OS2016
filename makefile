@@ -1,14 +1,14 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wconversion
-DEPS = main.h list.c list.h
+DEPS = main.h list.c list.h keys.c keys.h
 
-all: program OSMP  writer
+all: osmprun OSMP  osmpexecutable
 
-program: main.o list.o
-	$(CC) -o program main.o list.o
+osmprun: main.o list.o keys.o
+	$(CC) -o osmprun main.o list.o keys.o
 
-writer: writer.o OSMP.o
-	$(CC) -o writer writer.o OSMP.o
+osmpexecutable: writer.o OSMP.o keys.o
+	$(CC) -o osmpexecutable writer.o OSMP.o keys.o
 
 OSMP: OSMP.o
 	ar rs OSMP.a OSMP.o

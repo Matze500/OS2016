@@ -2,7 +2,7 @@
 
 #include "main.h"
 
-#define  PROGRAMM "./writer"
+#define  PROGRAMM "./osmpexecutable"
 
 int main (int argc,char **argv) {
 
@@ -20,6 +20,18 @@ int main (int argc,char **argv) {
       return EXIT_FAILURE;
     }
 
+  createkey(42);
+
+  key_t key = getkey();
+  printf("Shardmemkey: %d\n",(int)key);
+  int shmg = shmget(key,1024,IPC_CREAT);
+  printf("Shmget: %d\n",shmg);
+  char* shm = shmat(shmg,NULL,0);
+  if(shm == (char*)-1)
+    {
+      printf("\n%s\n",strerror(errno));
+    }
+  
   int i;
   
   for(i = 0; i < processcount; i++)
