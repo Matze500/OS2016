@@ -4,7 +4,6 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 
-int createkey(int id);
-key_t getkey();
+key_t createkey(int id);
 
 #endif

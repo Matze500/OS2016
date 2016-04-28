@@ -19,18 +19,46 @@ int main (int argc,char **argv) {
       printf("%s is not a valid number\n", argv[1]);
       return EXIT_FAILURE;
     }
-
-  createkey(42);
-
-  key_t key = getkey();
-  printf("Shardmemkey: %d\n",(int)key);
-  int shmg = shmget(key,1024,IPC_CREAT);
-  printf("Shmget: %d\n",shmg);
-  char* shm = shmat(shmg,NULL,0);
-  if(shm == (char*)-1)
+  
+  key_t key =  createkey(142);
+  if(key == (key_t) -1)
     {
-      printf("\n%s\n",strerror(errno));
+      printf("\nFTOK Error\n");
+      return EXIT_FAILURE;
     }
+  
+  int shmid = shmget(key,1024,IPC_CREAT | 0666);
+  if(shmid == -1)
+    {
+      printf("\nSHMGET: %s\n",strerror(errno));
+      return EXIT_FAILURE;
+    }
+  
+  struct shmid_ds shmid_struct, *buf;
+  buf = &shmid_struct;
+  int ret = shmctl(shmid,IPC_STAT,buf);
+  if(ret == -1)
+    {
+      printf("\nSHMCTL: %s\n",strerror(errno));
+      return EXIT_FAILURE;
+    }
+  
+  void* shm = shmat(shmid,NULL,0);
+  if(shm == (void*)-1)
+    {
+      printf("\nSHMAT: %s\n",strerror(errno));
+      return EXIT_FAILURE;
+    }
+
+  char c;
+  char *s;
+
+  s = (char*) shm;
+  
+  for(c = 'a'; c <= 'z';c++)
+    *s++ = c;
+  
+  s = NULL;
   
   int i;
   
@@ -78,6 +106,13 @@ int main (int argc,char **argv) {
 	  return EXIT_FAILURE;
 	}
       listdelete(first);
+    }
+
+  ret = shmctl(shmid,IPC_RMID,buf);
+  if(ret == -1)
+    {
+      printf("\nSHMCTL_Remove: %s\n",strerror(errno));
+      return EXIT_FAILURE;
     }
   
   return EXIT_SUCCESS;

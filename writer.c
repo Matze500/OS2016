@@ -1,6 +1,9 @@
 /* writer.c */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+#include "keys.h"
 
 int main(int argc, char **argv) {
    int i;
@@ -14,6 +17,30 @@ int main(int argc, char **argv) {
    OSMP_Send(NULL,0,0);
    OSMP_Recv(NULL,0,NULL,NULL);
    OSMP_Finalize();
-   
+
+   key_t key = createkey(142);
+   if(key == (key_t)-1)
+     {
+       printf("\nFTOK Error\n");
+       return EXIT_FAILURE;
+     }
+   int shmid = shmget(key,1024,0666);
+   if(shmid == -1)
+     {
+       printf("\nSHMGET Error\n");
+       return EXIT_FAILURE;
+     }
+   void *shm = shmat(shmid,NULL,0);
+   if(shm == (void*)-1)
+     {
+       printf("\nSHMAT Error\n");
+       return EXIT_FAILURE;
+     }
+   char *s;
+
+   for(s = (char*)shm; *s != NULL; s++)
+     putchar(*s);
+   putchar('\n');
+
    return EXIT_SUCCESS;
 }
