@@ -6,6 +6,7 @@
 #include "keys.h"
 
 int main(int argc, char **argv) {
+  sleep(5);
    int i;
    printf("Progammname : %s\n", argv[0]);   
    for( i=1; i < argc; i++)
@@ -36,11 +37,11 @@ int main(int argc, char **argv) {
        printf("\nSHMAT Error\n");
        return EXIT_FAILURE;
      }
-   char *s;
+   /*char *s;
 
    for(s = (char*)shm; *s != NULL; s++)
      putchar(*s);
-   putchar('\n');
+     putchar('\n');*/
 
    return EXIT_SUCCESS;
 }

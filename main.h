@@ -12,6 +12,7 @@
 #include <sys/shm.h>
 #include "list.h"
 #include "keys.h"
+#include "structs.h"
 
 int main(int argc,char **argv);
 int childroutine();

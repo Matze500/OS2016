@@ -3,6 +3,7 @@
 #include "main.h"
 
 #define  PROGRAMM "./osmpexecutable"
+// über argumentliste... 
 
 int main (int argc,char **argv) {
 
@@ -50,7 +51,14 @@ int main (int argc,char **argv) {
       return EXIT_FAILURE;
     }
 
-  char c;
+  struct osmp_info *osinfo;
+  int offset = sizeof(struct osmp_info) + processcount * sizeof(int);
+  osinfo = malloc(offset);
+  
+  osinfo->processcount = processcount;
+  osinfo->offset = offset;
+  
+  /*char c;
   char *s;
 
   s = (char*) shm;
@@ -58,13 +66,12 @@ int main (int argc,char **argv) {
   for(c = 'a'; c <= 'z';c++)
     *s++ = c;
   
-  s = NULL;
+    s = NULL;*/
   
   int i;
   
   for(i = 0; i < processcount; i++)
     {
-      sleep(3);
       pid_t newpid = fork();
 
       if(newpid == -1)
@@ -81,6 +88,7 @@ int main (int argc,char **argv) {
 	{
 	  printf("--- Elternprozess ---\n");
 	  printf("Add pid: %d\n",newpid);
+	  osinfo->pids[i]=newpid;
 	  int x = listadd(newpid);
 	  if(x != 0)
 	    {
@@ -89,7 +97,9 @@ int main (int argc,char **argv) {
 	    }
 	}
     }
-
+  
+  memcpy(&shm,&osinfo,offset);
+  
   while(listcount() != 0)
     {
       pid_t first = listgetfirst();
@@ -99,7 +109,7 @@ int main (int argc,char **argv) {
       printf("--- Elternprozess ---\n");
       printf("Wait for pid: %d\n",first);
       
-      pid_t error = waitpid(first,NULL,0);
+      pid_t error = waitpid(first,NULL,0); // alleine übe wait...
       if(error == -1)
 	{
 	  printf("\n%s\n",strerror(errno));
@@ -120,8 +130,8 @@ int main (int argc,char **argv) {
 
 int childroutine()
 {
-  sleep(5);
   printf("--- Kindprozess ---\n");
+  
   int execerr = execlp (PROGRAMM, PROGRAMM, "Hallo", "Welt", NULL);
   if(execerr == -1)
     {

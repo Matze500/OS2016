@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include "keys.h"
+#include <unistd.h>
 
 extern int OSMP_Init(int *argc, char ***argv);
 extern int OSMP_Size(int *size);
