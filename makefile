@@ -7,8 +7,8 @@ all: osmprun OSMP  osmpexecutable
 osmprun: main.o list.o keys.o
 	$(CC) -o osmprun main.o list.o keys.o
 
-osmpexecutable: writer.o OSMP.o
-	$(CC) -o osmpexecutable writer.o OSMP.o
+osmpexecutable: writer.o OSMP.o keys.o
+	$(CC) -o osmpexecutable writer.o OSMP.o keys.o
 
 OSMP: OSMP.o keys.o
 	ar rs OSMP.a OSMP.o keys.o

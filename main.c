@@ -3,25 +3,29 @@
 #include "main.h"
 
 #define  PROGRAMM "./osmpexecutable"
-// über argumentliste... 
+// Ueber argumentliste... 
 
-int main (int argc,char **argv) {
+char* programpath;
 
-  if(argc != 2)
+int main(int argc,char **argv)
+{
+
+  if(argc != 3)
     {
-      printf("Usage: %s count\n", argv[0]);
+      printf("Usage: %s programpath count\n", argv[0]);
       return EXIT_FAILURE;
     }
 
-  int processcount = atoi(argv[1]);
-
+  programpath = argv[1];
+  int processcount = atoi(argv[2]);
+  
   if(processcount == 0)
     {
       printf("%s is not a valid number\n", argv[1]);
       return EXIT_FAILURE;
     }
   
-  key_t key =  createkey(142);
+  key_t key = createkey(666);
   if(key == (key_t) -1)
     {
       printf("\nFTOK Error\n");
@@ -37,12 +41,6 @@ int main (int argc,char **argv) {
   
   struct shmid_ds shmid_struct, *buf;
   buf = &shmid_struct;
-  int ret = shmctl(shmid,IPC_STAT,buf);
-  if(ret == -1)
-    {
-      printf("\nSHMCTL: %s\n",strerror(errno));
-      return EXIT_FAILURE;
-    }
   
   void* shm = shmat(shmid,NULL,0);
   if(shm == (void*)-1)
@@ -52,22 +50,12 @@ int main (int argc,char **argv) {
     }
 
   struct osmp_info *osinfo;
-  int offset = sizeof(struct osmp_info) + processcount * sizeof(int);
+  size_t offset = sizeof(osmp_info_t) + processcount * sizeof(pid_t);
   osinfo = malloc(offset);
   
   osinfo->processcount = processcount;
   osinfo->offset = offset;
-  
-  /*char c;
-  char *s;
-
-  s = (char*) shm;
-  
-  for(c = 'a'; c <= 'z';c++)
-    *s++ = c;
-  
-    s = NULL;*/
-  
+ 
   int i;
   
   for(i = 0; i < processcount; i++)
@@ -97,8 +85,8 @@ int main (int argc,char **argv) {
 	    }
 	}
     }
-  
-  memcpy(&shm,&osinfo,offset);
+
+  memcpy(shm,osinfo,offset);
   
   while(listcount() != 0)
     {
@@ -118,7 +106,7 @@ int main (int argc,char **argv) {
       listdelete(first);
     }
 
-  ret = shmctl(shmid,IPC_RMID,buf);
+  int ret = shmctl(shmid,IPC_RMID,buf);
   if(ret == -1)
     {
       printf("\nSHMCTL_Remove: %s\n",strerror(errno));
@@ -132,7 +120,7 @@ int childroutine()
 {
   printf("--- Kindprozess ---\n");
   
-  int execerr = execlp (PROGRAMM, PROGRAMM, "Hallo", "Welt", NULL);
+  int execerr = execlp (programpath, programpath, "Hallo", "Welt", NULL);
   if(execerr == -1)
     {
       printf("Error: %s\n",strerror(errno));
