@@ -1,11 +1,8 @@
 /* main.c */
 
-#include "main.h"
+#include "main.h" 
 
-#define  PROGRAMM "./osmpexecutable"
-// Ueber argumentliste... 
-
-char* programpath;
+char* programpath = "";
 
 int main(int argc,char **argv)
 {
@@ -48,14 +45,19 @@ int main(int argc,char **argv)
       printf("\nSHMAT: %s\n",strerror(errno));
       return EXIT_FAILURE;
     }
-
+  
+  uint8_t messagearr[256]; //Frei = 1 Besetzt = 0
+  memset(messagearr,1,sizeof(messagearr));
+  
   struct osmp_info *osinfo;
-  size_t offset = sizeof(osmp_info_t) + processcount * sizeof(pid_t);
+  size_t offset = sizeof(osmp_info_t) + sizeof(messagearr) + processcount * sizeof(pid_t);
   osinfo = malloc(offset);
   
   osinfo->processcount = processcount;
   osinfo->offset = offset;
- 
+  
+  memcpy(osinfo->messages, messagearr, sizeof(messagearr));
+  
   int i;
   
   for(i = 0; i < processcount; i++)
