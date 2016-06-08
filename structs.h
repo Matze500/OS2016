@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 
+
 typedef struct osmp_info
 {
   int processcount;
@@ -12,19 +13,19 @@ typedef struct osmp_info
 } osmp_info_t;
 
 
-typedef struct osmp_mailbox
-{
-  int first;
-  int last;
-  uint8_t mailbox[16];
-  } osmp_mailbox_t;
-
 typedef struct osmp_message
 {
   int source;
   int dest;
-  size_t length;
-  uint8_t message[128];
+  int length;
+  char data[128];
 } osmp_message_t;
+
+typedef struct osmp_mailbox
+{
+  int first;
+  int last;
+  osmp_message_t *mailbox[16];
+  } osmp_mailbox_t;
 
 #endif

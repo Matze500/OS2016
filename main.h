@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
 #include "list.h"
 #include "keys.h"
 #include "structs.h"

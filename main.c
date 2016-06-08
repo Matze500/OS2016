@@ -21,6 +21,8 @@ int main(int argc,char **argv)
       printf("%s is not a valid number\n", argv[1]);
       return EXIT_FAILURE;
     }
+
+  int count;
   
   key_t key = createkey(666);
   if(key == (key_t) -1)
@@ -28,11 +30,51 @@ int main(int argc,char **argv)
       printf("\nFTOK Error\n");
       return EXIT_FAILURE;
     }
+
+  size_t boxsize = sizeof(osmp_mailbox_t);
+  uint8_t messagearr[256];
+  size_t osmpsize = sizeof(osmp_info_t) + sizeof(messagearr)+ processcount * sizeof(pid_t);
+
+  size_t smsize = processcount * boxsize + osmpsize;
   
-  int shmid = shmget(key,1024,IPC_CREAT | 0666);
+  int shmid = shmget(key,smsize,IPC_CREAT | 0666);
   if(shmid == -1)
     {
       printf("\nSHMGET: %s\n",strerror(errno));
+      return EXIT_FAILURE;
+    }
+
+  int semid = semget(key,0,IPC_PRIVATE);
+  if(semid < 0)
+    {
+      semid = semget(key,2+processcount,IPC_CREAT | 0640);
+      if(semid < 0)
+	{
+	  printf("\nSEMGET: %s\n",strerror(errno));
+	  return EXIT_FAILURE;
+	}
+      if(semctl(semid,0,SETVAL,(int)1) == -1)
+	{
+	  printf("\nSEMCTL1: %s\n",strerror(errno));
+	  return EXIT_FAILURE;
+	}
+      if(semctl(semid,1,SETVAL,(int)256) == -1)
+	{
+	  printf("\nSEMCTL2: %s\n",strerror(errno));
+	  return EXIT_FAILURE;
+	}
+      for(count = 0;count < processcount;count++)
+	{
+	  if(semctl(semid,count+2,SETVAL,(int)16) == -1)
+	    {
+	      printf("\nSEMCTL3: %s\n",strerror(errno));
+	      return EXIT_FAILURE;
+	    }
+	}
+    }
+  else
+    {
+      printf("\nSEMGET: %s\n",strerror(errno));
       return EXIT_FAILURE;
     }
   
@@ -45,22 +87,32 @@ int main(int argc,char **argv)
       printf("\nSHMAT: %s\n",strerror(errno));
       return EXIT_FAILURE;
     }
+
+  //Erstellen der OSMP_Info
   
-  uint8_t messagearr[256]; //Frei = 1 Besetzt = 0
   memset(messagearr,1,sizeof(messagearr));
   
   struct osmp_info *osinfo;
-  size_t offset = sizeof(osmp_info_t) + sizeof(messagearr) + processcount * sizeof(pid_t);
-  osinfo = malloc(offset);
+  osinfo = malloc(osmpsize);
   
   osinfo->processcount = processcount;
-  osinfo->offset = offset;
+  osinfo->offset = osmpsize;
   
   memcpy(osinfo->messages, messagearr, sizeof(messagearr));
+
+
+  //Erstellen der Messageboxen
   
-  int i;
-  
-  for(i = 0; i < processcount; i++)
+  for(count = 0;count < processcount;count++)
+    {
+      struct osmp_mailbox *box = NULL;
+      box = malloc(boxsize);
+      memcpy((shm+osmpsize+count*boxsize),box,boxsize);
+    }
+
+
+  //Starten der Kindprozesse
+  for(count = 0; count < processcount; count++)
     {
       pid_t newpid = fork();
 
@@ -78,7 +130,7 @@ int main(int argc,char **argv)
 	{
 	  printf("--- Elternprozess ---\n");
 	  printf("Add pid: %d\n",newpid);
-	  osinfo->pids[i]=newpid;
+	  osinfo->pids[count]=newpid;
 	  int x = listadd(newpid);
 	  if(x != 0)
 	    {
@@ -88,7 +140,7 @@ int main(int argc,char **argv)
 	}
     }
 
-  memcpy(shm,osinfo,offset);
+  memcpy(shm,osinfo,osmpsize);
   
   while(listcount() != 0)
     {
@@ -108,7 +160,9 @@ int main(int argc,char **argv)
       listdelete(first);
     }
 
-  int ret = shmctl(shmid,IPC_RMID,buf);
+  int ret = semctl(semid,0,IPC_RMID,0);
+  
+  ret = shmctl(shmid,IPC_RMID,buf);
   if(ret == -1)
     {
       printf("\nSHMCTL_Remove: %s\n",strerror(errno));

@@ -7,7 +7,6 @@
 #include "keys.h"
 
 int main(int argc, char **argv) {
-  sleep(5);
    int i;
    printf("Progammname : %s\n", argv[0]);   
    for( i=1; i < argc; i++)
