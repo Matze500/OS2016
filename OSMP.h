@@ -8,7 +8,6 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include "keys.h"
 #include <unistd.h>
 #include "structs.h"
@@ -30,6 +29,7 @@ extern int OSMP_Send(const void *buf, int count, int dest);
 extern int OSMP_Recv(void *buf, int count,int *source, int *len);
 extern int OSMP_Finalize(void);
 
-int semoperation(short op);
+int wait(short semnum);
+int signal(short semnum);
 
 #endif
