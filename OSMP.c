@@ -5,7 +5,7 @@ int semid;
 
 int OSMP_Init(int *argc, char ***argv)
 {
-  key_t key = createkey(666);
+  key_t key = createkey(66);
   if(key == (key_t)-1)
     {
       return OSMP_ERROR;

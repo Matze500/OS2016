@@ -2,7 +2,7 @@
 
 #include "main.h" 
 
-char* programpath = "";
+char *programpath;
 
 int semid;
 int shmid;
@@ -27,7 +27,7 @@ int main(int argc,char **argv)
 
   int count;
   
-  key_t key = createkey(666);
+  key_t key = createkey(66);
   if(key == (key_t) -1)
     {
       printf("\nFTOK Error\n");
@@ -225,9 +225,17 @@ int childroutine(char **argv)
 
 void saveexit(void)
 {
-  int ret = semctl(semid,0,IPC_RMID,0);
+  int ret;
+  
+  if(semid>0)
+    {
+      ret = semctl(semid,0,IPC_RMID,0);
+    }
   struct shmid_ds shmid_struct, *buf;
   buf = &shmid_struct;
-  ret = shmctl(shmid,IPC_RMID,buf);
+  if(shmid > 0)
+    {
+      ret = shmctl(shmid,IPC_RMID,buf);
+    }
   return EXIT_FAILURE;
 }

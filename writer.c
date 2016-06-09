@@ -37,23 +37,19 @@ int main(int argc, char **argv) {
        bufin[0] = 1;
        bufin[1] = 2;
 
-       printf("Try to send data\n");
-       
        if(OSMP_Send(bufin,sizeof(bufin),1) == -1)
 	 {
 	   printf("Send: OSMP_ERROR\n");
 	   free(bufin);
 	   return EXIT_FAILURE;
 	 }
-	 free(bufin);
+	free(bufin);
      }
    else
      {
        int *bufout = malloc(2*sizeof(int));
        int source;
        int len;
-
-       sleep(10);
        
        if(OSMP_Recv(bufout,sizeof(bufout),&source,&len) == -1)
 	 {
