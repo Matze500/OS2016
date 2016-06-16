@@ -15,12 +15,10 @@
 #define OSMP_SUCCESS 0
 #define OSMP_ERROR -1
 
-#define UNLOCK 1
-#define LOCK -1 
+#define MUTEX 0
+#define LIMIT 1
 
-#define OSMP_MAX_MESSAGES_PROC 16
-#define OSMP_MAX_SLOTS 256
-#define OSMP_MAX_PAYLOAD_LENGTH 128
+#define RECEIVED(rank) (rank+2)
 
 extern int OSMP_Init(int *argc, char ***argv);
 extern int OSMP_Size(int *size);
@@ -29,7 +27,7 @@ extern int OSMP_Send(const void *buf, int count, int dest);
 extern int OSMP_Recv(void *buf, int count,int *source, int *len);
 extern int OSMP_Finalize(void);
 
-int wait(short semnum);
-int signal(short semnum);
+int sem_wait(short semnum);
+int sem_signal(short semnum);
 
 #endif

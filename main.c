@@ -34,10 +34,11 @@ int main(int argc,char **argv)
       return EXIT_FAILURE;
     }
 
-  size_t boxsize = 2*sizeof(int)+16*sizeof(osmp_message_t);
+  size_t boxsize = sizeof(osmp_mailbox_t);
+  size_t messagessize = sizeof(osmp_message_t) * OSMP_MAX_SLOTS;
   size_t osmpsize = sizeof(osmp_info_t) + processcount * sizeof(pid_t);
 
-  size_t smsize = processcount * boxsize + osmpsize;
+  size_t smsize = (processcount +1) * boxsize + osmpsize + messagessize; //+1 Da eine Mailbox fuer freie Plaezte
   
   shmid = shmget(key,smsize,IPC_CREAT | 0666);
   if(shmid == -1)
@@ -60,7 +61,7 @@ int main(int argc,char **argv)
 	  printf("\nSEMCTL1: %s\n",strerror(errno));
 	  saveexit();
 	}
-      if(semctl(semid,1,SETVAL,(int)256) == -1)
+      if(semctl(semid,1,SETVAL,(int)OSMP_MAX_SLOTS) == -1)
 	{
 	  printf("\nSEMCTL2: %s\n",strerror(errno));
 	  saveexit();
@@ -72,7 +73,7 @@ int main(int argc,char **argv)
 	      printf("\nSEMCTL3: %s\n",strerror(errno));
 	      saveexit();
 	    }
-	  if(semctl(semid,count+2+processcount,SETVAL,(int)16) == -1)
+	  if(semctl(semid,count+2+processcount,SETVAL,(int)OSMP_MAX_MESSAGES_PROC) == -1)
 	    {
 	      printf("\nSEMCTL4: %s\n",strerror(errno));
 	      saveexit();
@@ -96,33 +97,44 @@ int main(int argc,char **argv)
     }
 
   //Erstellen der OSMP_Info
-  
   struct osmp_info *osinfo;
   osinfo = malloc(osmpsize);
   
   osinfo->processcount = processcount;
   osinfo->offset = osmpsize;
 
-  //Erstellen der Messageboxen
-  
-  for(count = 0;count < processcount;count++)
+  //Erstellen der Mailboxen
+  //Erste Mailbox fuer freie Nachrichten
+  for(count = 0;count < (processcount+1);count++)
     {
       struct osmp_mailbox *box = calloc(1,boxsize);
-      box->first = 0;
-      box->last = 0;
-
-      osmp_message_t* msgs = calloc(16,sizeof(osmp_message_t));
-      msgs->source = 0;
-      msgs->dest = 0;
-      msgs->length = 0;
-      memset(msgs->data,0,(128*sizeof(char)));
-
-      memcpy(box->mailbox,msgs,(16*sizeof(osmp_message_t)));
+      if(count == 0)
+	{
+	  box->first = 0;
+	  box->last = OSMP_MAX_SLOTS;
+	}
+      else
+	{
+	  box->first = -1;
+	  box->last = -1;
+	}
       
       memcpy((((char*)shm)+osmpsize+count*boxsize),box,boxsize);
       
       free(box);
-      free(msgs);
+    }
+
+  size_t messagesize = sizeof(osmp_message_t);
+  
+  //Erstellen der leeren Nachrichten
+  for(count = 0;count < OSMP_MAX_SLOTS;count++)
+    {
+      struct osmp_message *msg = calloc(1,messagesize);
+      msg->source = -1;
+      msg->length = -1;
+      msg->next = -1;
+      memcpy((((char*)shm)+osmpsize+(processcount+1)*boxsize+count*messagesize),msg,messagesize);
+      free(msg);
     }
 
   static struct sembuf sema;

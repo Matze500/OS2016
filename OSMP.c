@@ -40,7 +40,7 @@ int OSMP_Size(int *size)
       return OSMP_ERROR;
     }
 
-  if(wait(0) == OSMP_ERROR)
+  if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -48,7 +48,7 @@ int OSMP_Size(int *size)
   struct osmp_info *osinfo = (struct osmp_info *)shm;
   *size = osinfo->processcount;
 
-  if(signal(0) == OSMP_ERROR)
+  if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -62,7 +62,7 @@ int OSMP_Rank(int *rank)
   if(shm == NULL)
     return OSMP_ERROR;
   
-  if(wait(0) == OSMP_ERROR)
+  if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -81,7 +81,7 @@ int OSMP_Rank(int *rank)
 	}
     }
 
-  if(signal(0) == OSMP_ERROR)
+  if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -91,7 +91,7 @@ int OSMP_Rank(int *rank)
 
 int OSMP_Send(const void *buf, int count, int dest)
 { 
-  if(count > 128)
+  if(count > OSMP_MAX_PAYLOAD_LENGTH)
     return OSMP_ERROR;
 
   int rank;
@@ -100,19 +100,19 @@ int OSMP_Send(const void *buf, int count, int dest)
   OSMP_Size(&size);
   
   //Pruefen ob maximal Nachrichtenanzahl erreicht
-  if(wait(1) == OSMP_ERROR)
+  if(sem_wait(LIMIT) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Pruefen ob Mailbox des Empfaengers voll
-  if(wait(dest+2+size) == OSMP_ERROR)
+  if(sem_wait(RECEIVED(dest)+size) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Shared Memory sperren
-  if(wait(0) == OSMP_ERROR)
+  if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -120,37 +120,64 @@ int OSMP_Send(const void *buf, int count, int dest)
   struct osmp_info *osinfo = (struct osmp_info*)shm;
   
   size_t osmpsize = osinfo->offset;
-  size_t mailboxsize = 2*sizeof(int)+16*sizeof(osmp_message_t);
-  
-  struct osmp_mailbox *box = (struct osmp_mailbox*)(((char*)shm)+osmpsize+dest*mailboxsize);
+  size_t mailboxsize = sizeof(osmp_mailbox_t);
 
-  int pos = box->last;
+  //Mailboxen raussuchen
   
-  if(box->last == 15)
+  struct osmp_mailbox *freebox = (struct osmp_mailbox*)(((char*)shm)+osmpsize);
+  struct osmp_mailbox *destbox = (struct osmp_mailbox*)(((char*)shm)+osmpsize+(dest+1)*mailboxsize);
+
+  int freeplace = freebox->first;
+  int destfirst = destbox->first;
+
+  if(destfirst == -1)
     {
-      box->last = 0;
+      destbox->first = freeplace;
     }
   else
     {
-      box->last++;
+      destbox->last = freeplace;
+    }
+
+  printf("Freeplace: %d\n",freeplace);
+  
+  //Nachricht ersellen
+  struct osmp_message *msg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+freeplace*sizeof(osmp_message_t));
+
+  msg->source = rank;
+  msg->length = count;
+  memcpy(msg->data,buf,count);
+  
+  //Naechste freie Stelle suchen
+  int free = semctl(semid,1,GETVAL,1);
+  
+  if(free != 0)
+    {
+      while(free != -1)
+	{
+	  freeplace++;
+	  struct osmp_message *freemsg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+freeplace*sizeof(osmp_message_t));
+	  free = freemsg->source;
+	  if(free == OSMP_MAX_SLOTS)
+	    {
+	      free = 0;
+	    }
+	}
+      freebox->first = freeplace;
+    }
+  else
+    {
+      freebox->first = 0;
     }
   
-  box->mailbox[pos].source = rank;
-  box->mailbox[pos].dest = dest;
-  box->mailbox[pos].length = count;
-  
-  memcpy(box->mailbox[pos].data,buf,count);
-  
-  memcpy((((char*)shm)+osmpsize+dest*mailboxsize),box,mailboxsize);
-
-  //Destination neue Nachricht signalisieren
-  if(signal(dest+2) == OSMP_ERROR)
+  //Empfaenger neue Nachricht signalisieren
+  if(sem_signal(RECEIVED(dest)) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Shared Memory freigeben
-  if(signal(0) == OSMP_ERROR)
+  if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -159,7 +186,7 @@ int OSMP_Send(const void *buf, int count, int dest)
 
 int OSMP_Recv(void *buf, int count,int *source, int *len)
 {
-  if(count > 128)
+  if(count > OSMP_MAX_PAYLOAD_LENGTH)
     return OSMP_ERROR;
 
   printf("Recv: Get rank\n");
@@ -169,13 +196,13 @@ int OSMP_Recv(void *buf, int count,int *source, int *len)
   OSMP_Size(&size);
   
   //Pruefen ob Nachricht fuer einen da ist
-  if(wait(rank+2) == OSMP_ERROR)
+  if(sem_wait(RECEIVED(rank)) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Shared Memory sperren
-  if(wait(0) == OSMP_ERROR)
+  if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -183,35 +210,49 @@ int OSMP_Recv(void *buf, int count,int *source, int *len)
   struct osmp_info *osinfo = (struct osmp_info*)shm;
 
   size_t osmpsize = osinfo->offset;
-  size_t mailboxsize = 2*sizeof(int)+16*sizeof(osmp_message_t);
+  size_t mailboxsize = sizeof(osmp_mailbox_t);
+  size_t messagesize = sizeof(osmp_message_t);
   
-  struct osmp_mailbox *box = (struct osmp_mailbox*)(((char*)shm)+osmpsize+rank*mailboxsize);
+  struct osmp_mailbox *box = (struct osmp_mailbox*)(((char*)shm)+osmpsize+(rank+1)*mailboxsize);
+
+  printf("First: %d\n",box->first);
   
   int first = box->first;
+  int last = box->last;
 
-  *len = box->mailbox[first].length;
-  *source = box->mailbox[first].source;
+  struct osmp_message *msg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+first*messagesize);
   
-  memcpy(buf,box->mailbox[first].data,count);
+  *len = msg->length;
+  *source = msg->source;
+  memcpy(buf,msg->data,count);
+  
+  box->first = msg->next;
+  if(msg->next == last)
+    {
+      box->last = -1;
+    }
 
-  first++;
-
-  memcpy((((char*)shm)+osmpsize+rank*mailboxsize),box,mailboxsize);
+  msg->next = -1;
+  msg->source = -1;
+  
+  //Freien Platz in die passende Mailbox eintragen
+  struct osmp_mailbox *free = (struct osmp_message*)(((char*)shm)+osmpsize);
+  free->first = first;
   
   //Platz freigeben fuer neue Nachricht im SM
-  if(signal(1) == OSMP_ERROR)
+  if(sem_signal(LIMIT) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Platz in Mailbox freigeben
-  if(signal(rank+2+size) == OSMP_ERROR)
+  if(sem_signal(RECEIVED(rank)+size) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
   
   //Shared Memory freigeben
-  if(signal(0) == OSMP_ERROR)
+  if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -223,7 +264,7 @@ int OSMP_Finalize(void)
   return OSMP_SUCCESS;
 }
 
-int wait(short semnum)
+int sem_wait(short semnum)
 {
   static struct sembuf sema;
   sema.sem_num = semnum;
@@ -231,7 +272,7 @@ int wait(short semnum)
   return semop(semid,&sema,1);
 }
 
-int signal(short semnum)
+int sem_signal(short semnum)
 {
   static struct sembuf sema;
   sema.sem_num = semnum;
