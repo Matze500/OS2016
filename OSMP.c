@@ -129,7 +129,14 @@ int OSMP_Send(const void *buf, int count, int dest)
 
   int freeplace = freebox->first;
   int destfirst = destbox->first;
+  int destlast = destbox->last;
 
+  if(destlast != -1)
+    {
+      struct osmp_message *oldmsg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+destlast*sizeof(osmp_message_t));
+      oldmsg->next = freeplace;
+    }
+  
   if(destfirst == -1)
     {
       destbox->first = freeplace;
