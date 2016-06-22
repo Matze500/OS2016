@@ -1,0 +1,86 @@
+#!/bin/bash
+
+function main(){
+	
+	starterPath="/home/niklas/ClionProjects/Praktikum/Debug/osmprun"
+ 	executablePath="/home/niklas/ClionProjects/Praktikum/tests"
+	
+	declare -a FUNCTION
+	FUNCTION[0]="test0"
+	FUNCTION[1]="test1"
+	FUNCTION[2]="test2"
+	FUNCTION[3]="test3"
+	FUNCTION[4]="test4"
+	FUNCTION[5]="test5"
+	FUNCTION[6]="test6"
+	FUNCTION[7]="test7"
+	FUNCTION[8]="test8"
+	FUNCTION[9]="test9"
+	FUNCTION[10]="test10"
+	FUNCTION[11]="test11"
+	
+
+	for i in `seq $1 11`; do   
+		${FUNCTION[$i]} $starterPath $executablePath;
+		read -p "Press any key to continue" -n1 -s;
+		clear;
+		clear; 
+	done
+	
+}
+
+function test0(){
+	$1 2 $2"/TEST0" 
+}
+
+function test1(){
+	$1 2 $2"/TEST1" 
+}
+
+function test2(){
+	$1 2 $2"/TEST2" 
+}
+
+function test3(){
+	$1 43 $2"/TEST3"
+}
+
+function test4(){
+	$1 2 $2"/TEST4" 
+}
+
+function test5(){
+	$1 270 $2"/TEST5" 
+}
+
+function test6(){
+	$1 2 $2"/TEST6" 
+}
+
+function test7(){
+	$1 2 $2"/TEST7" 
+}
+
+function test8(){
+	$1 2 $2"/TEST8" 
+}
+
+function test9(){
+	$1 34 $2"/TEST9" 
+}
+
+function test10(){
+	$1 2 $2"/TEST10" 
+}
+
+function test11(){
+	$1 2 $2"/TEST11" 
+}
+
+
+if [ $# -eq 0 ]
+  then
+    main 0
+  else
+    main $1
+fi
