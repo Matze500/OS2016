@@ -98,14 +98,14 @@ int OSMP_Send(const void *buf, int count, int dest)
   int size;
   OSMP_Size(&size);
   
-  //Pruefen ob maximal Nachrichtenanzahl erreicht
-  if(sem_wait(LIMIT) == OSMP_ERROR)
+  //Pruefen ob Mailbox des Empfaengers voll
+  if(sem_wait(RECEIVED(dest)+size) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
-  
-  //Pruefen ob Mailbox des Empfaengers voll
-  if(sem_wait(RECEIVED(dest)+size) == OSMP_ERROR)
+
+  //Pruefen ob maximal Nachrichtenanzahl erreicht
+  if(sem_wait(LIMIT) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
@@ -258,20 +258,13 @@ int OSMP_Recv(void *buf, int count,int *source, int *len)
     {
       return OSMP_ERROR;
     }
-  
-  int l = semctl(semid,RECEIVED(rank)+size,GETVAL);
-  printf("Local: %d\n",l);
 
   //Shared Memory freigeben
   if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
-  int m = semctl(semid,MUTEX,GETVAL);
-  printf("Mutex: %d\n",m);
 
-  int g = semctl(semid,LIMIT,GETVAL);
-  printf("Global: %d\n",g);
   return OSMP_SUCCESS;
 }
 
@@ -285,6 +278,7 @@ int sem_wait(short semnum)
   static struct sembuf sema;
   sema.sem_num = semnum;
   sema.sem_op = -1;
+  sema.sem_flg = SEM_UNDO;
   return semop(semid,&sema,1);
 }
 
@@ -293,5 +287,6 @@ int sem_signal(short semnum)
   static struct sembuf sema;
   sema.sem_num = semnum;
   sema.sem_op = 1;
+  sema.sem_flg = SEM_UNDO;
   return semop(semid,&sema,1);
 }

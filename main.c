@@ -61,7 +61,7 @@ int main(int argc,char **argv)
 	  printf("\nSEMCTL1: %s\n",strerror(errno));
 	  return saveexit();
 	}
-      if(semctl(semid,1,SETVAL,(int)OSMP_MAX_SLOTS-1) == -1)
+      if(semctl(semid,1,SETVAL,(int)OSMP_MAX_SLOTS) == -1)
 	{
 	  printf("\nSEMCTL2: %s\n",strerror(errno));
 	  return saveexit();
@@ -73,7 +73,7 @@ int main(int argc,char **argv)
 	      printf("\nSEMCTL3: %s\n",strerror(errno));
 	      return saveexit();
 	    }
-	  if(semctl(semid,count+2+processcount,SETVAL,(int)OSMP_MAX_MESSAGES_PROC-1) == -1)
+	  if(semctl(semid,count+2+processcount,SETVAL,(int)OSMP_MAX_MESSAGES_PROC) == -1)
 	    {
 	      printf("\nSEMCTL4: %s\n",strerror(errno));
 	      return saveexit();
