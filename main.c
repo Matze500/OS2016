@@ -16,8 +16,8 @@ int main(int argc,char **argv)
       return EXIT_FAILURE;
     }
 
-  programpath = argv[1];
-  int processcount = atoi(argv[2]);
+  programpath = argv[2];
+  int processcount = atoi(argv[1]);
   
   if(processcount == 0)
     {

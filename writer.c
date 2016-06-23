@@ -1,71 +1,78 @@
-/* writer.c */
+//43 executables necessary 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "OSMP.h"
 
-int main(int argc, char **argv) {
-   int i;   
-   for( i=0; i < argc; i++)
-      printf("Argumente %d : %s\n", i, argv[i]);
 
-   int size = 0;
-   int rank = 0;
+void rand_str(char *dest, size_t length);
 
-   
-   if(OSMP_Init(&argc,&argv) == -1)
-     {
-       printf("Init: OSMP_ERROR\n");
-       return EXIT_FAILURE;
-     }
-   if(OSMP_Size(&size) == -1)
-     {
-       printf("Size: OSMP_ERROR\n");
-       return EXIT_FAILURE;
-     }
-   printf("Size: %d\n",size);
-   if(OSMP_Rank(&rank) == -1)
-     {
-       printf("Rank: OSMP_ERROR\n");
-       return EXIT_FAILURE;
-     }
-   printf("Rank: %d\n",rank);
- 
-   if(rank == 0)
-     {
-       int *bufin = malloc(2*sizeof(int));
-       bufin[0] = 1;
-       bufin[1] = 2;
+int main(int argc, char *argv[]) {
 
-       if(OSMP_Send(bufin,sizeof(bufin),1) == -1)
-	 {
-	   printf("Send: OSMP_ERROR\n");
-	   free(bufin);
-	   return EXIT_FAILURE;
-	 }
-	free(bufin);
-     }
-   else
-     {
-       int *bufout = malloc(2*sizeof(int));
-       int source;
-       int len;
-       
-       if(OSMP_Recv(bufout,sizeof(bufout),&source,&len) == -1)
-	 {
-	   printf("Recv: OSMP_ERROR\n");
-	   free(bufout);
-	   return EXIT_FAILURE;
-	 }
-       printf("Process %d received %d byte from %d [%d:%d]\n",rank,len,source,bufout[0],bufout[1]);
-       free(bufout);
-     }
-   
-   if(OSMP_Finalize() == -1)
-     {
-       printf("Finalize: OSMP_ERROR\n");
-       return EXIT_FAILURE;
-     }
+    int source,len,size=-1;
+    int rank = -1;
 
-   return EXIT_SUCCESS;
+    if (OSMP_Init(&argc, &argv) != OSMP_SUCCESS) {
+        printf("OSMP_INIT Error \n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (OSMP_Size(&size) != OSMP_SUCCESS || size!=43) {
+        printf("OSMP_SIZE Error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (OSMP_Rank(&rank) != OSMP_SUCCESS) {
+        printf("OSMP_RANK Error \n");
+        exit(EXIT_FAILURE);
+    }
+
+    char *bufin, *bufout;
+    if (rank == 0) {
+        for (int i = 0; i < 20; i++) {
+            bufout = malloc(32);
+            rand_str(bufout, 32);
+            printf("process %d sending random message %d to process 1: %s\n", rank,i, bufout);
+            if (OSMP_Send(bufout, 32, 1) != OSMP_SUCCESS) {
+
+                printf("OSMP_SEND Error \n");
+                exit(EXIT_FAILURE);
+
+            }
+            free(bufout);
+        }
+    } else if(rank==1){
+        sleep(5);
+        for (int j = 0; j < 20; j++) {
+            bufin = malloc(32);
+            printf("Process %d trying to receive msg %d\n", rank, j);
+            if (OSMP_Recv(bufin, 32, &source, &len) != OSMP_SUCCESS) {
+                printf("OSMP_RECV Error: OSMP_Recv \n");
+
+                exit(EXIT_FAILURE);
+            }
+            printf("Process %d received %d bytes from process %d: %s\n", rank, len, source, bufin);
+            free(bufin);
+        }
+
+
+    }
+    if(OSMP_Finalize()!=OSMP_SUCCESS){
+        printf("OSMP_FINALIZE Error");
+        exit(EXIT_FAILURE);
+    }
+    return 0;
+}
+
+void rand_str(char *dest, size_t length) {
+    char charset[] = "0123456789"
+            "abcdefghijklmnopqrstuvwxyz"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    while (length-- > 1) {
+        int index = rand() % (int)(sizeof(charset) -1);
+        *dest++ = charset[index];
+    }
+    *dest = '\0';
 }

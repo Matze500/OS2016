@@ -34,9 +34,8 @@ int OSMP_Init(int *argc, char ***argv)
 int OSMP_Size(int *size)
 {
   
-  if(shm == NULL)
+  if(shm == NULL || size == NULL)
     {
-      printf("OSMP_Size_Error\n");
       return OSMP_ERROR;
     }
 
@@ -59,7 +58,7 @@ int OSMP_Size(int *size)
 int OSMP_Rank(int *rank)
 {
 
-  if(shm == NULL)
+  if(shm == NULL || rank == NULL)
     return OSMP_ERROR;
   
   if(sem_wait(MUTEX) == OSMP_ERROR)
@@ -91,7 +90,7 @@ int OSMP_Rank(int *rank)
 
 int OSMP_Send(const void *buf, int count, int dest)
 { 
-  if(count > OSMP_MAX_PAYLOAD_LENGTH)
+  if((count > OSMP_MAX_PAYLOAD_LENGTH)||(count < 0)||(buf == NULL))
     return OSMP_ERROR;
 
   int rank;
@@ -140,13 +139,12 @@ int OSMP_Send(const void *buf, int count, int dest)
   if(destfirst == -1)
     {
       destbox->first = freeplace;
+      destbox->last = freeplace;
     }
   else
     {
       destbox->last = freeplace;
     }
-
-  printf("Freeplace: %d\n",freeplace);
   
   //Nachricht ersellen
   struct osmp_message *msg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+freeplace*sizeof(osmp_message_t));
@@ -193,10 +191,11 @@ int OSMP_Send(const void *buf, int count, int dest)
 
 int OSMP_Recv(void *buf, int count,int *source, int *len)
 {
-  if(count > OSMP_MAX_PAYLOAD_LENGTH)
+  
+  
+  if((count > OSMP_MAX_PAYLOAD_LENGTH)||(buf == NULL)||(count < 0))
     return OSMP_ERROR;
-
-  printf("Recv: Get rank\n");
+  
   int rank;
   OSMP_Rank(&rank);
   int size;
@@ -221,14 +220,15 @@ int OSMP_Recv(void *buf, int count,int *source, int *len)
   size_t messagesize = sizeof(osmp_message_t);
   
   struct osmp_mailbox *box = (struct osmp_mailbox*)(((char*)shm)+osmpsize+(rank+1)*mailboxsize);
-
-  printf("First: %d\n",box->first);
   
   int first = box->first;
   int last = box->last;
 
   struct osmp_message *msg = (struct osmp_message*)(((char*)shm)+osmpsize+(size+1)*mailboxsize+first*messagesize);
   
+  if(msg->length != count)
+	return OSMP_ERROR;
+
   *len = msg->length;
   *source = msg->source;
   memcpy(buf,msg->data,count);
