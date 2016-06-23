@@ -18,6 +18,6 @@
 int main(int argc,char **argv);
 int childroutine();
 
-void saveexit();
+int saveexit();
 
 #endif

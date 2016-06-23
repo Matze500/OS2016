@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < 16; i++) {
             bufout = malloc(32);
             rand_str(bufout, 32);
-            printf("process %d sending random message to process %d: %s\n", rank, rank + 17, bufout);
+            //printf("process %d sending random message to process %d: %s\n", rank, rank + 17, bufout);
             if (OSMP_Send(bufout, 32, rank + 17) != OSMP_SUCCESS) {
 
                 printf("osmp_SendRecv Error: OSMP_Send \n");
@@ -47,15 +47,14 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < 16; i++) {
             bufout = malloc(32);
             rand_str(bufout, 32);
-            printf("process %d sending random message to process %d: %s (should block, no free msg slots)\n", rank,
-                   rank + 17, bufout);
+            //printf("process %d sending random message to process %d: %s (should block, no free msg slots)\n", rank,rank + 17, bufout);
             if (OSMP_Send(bufout, 32, rank + 17) != OSMP_SUCCESS) {
 
                 printf("osmp_SendRecv Error: OSMP_Send \n");
                 exit(EXIT_FAILURE);
 
             }
-            puts("Process 16, msg was sent");
+            //puts("Process 16, msg was sent");
 
             free(bufout);
         }
@@ -63,13 +62,13 @@ int main(int argc, char *argv[]) {
         sleep(10);
         for (int j = 0; j < 16; j++) {
             bufin = malloc(32);
-            printf("Process %d trying to receive msg\n", rank);
+            printf("Process %d to receive msg\n", rank);
             if (OSMP_Recv(bufin, 32, &source, &len) != OSMP_SUCCESS) {
                 printf("osmp_SendRecv Error: OSMP_Recv \n");
 
                 exit(EXIT_FAILURE);
             }
-            printf("Process %d received %d bytes from process %d: %s\n", rank, len, source, bufin);
+            //printf("Process %d received %d bytes from process %d: %s\n", rank, len, source, bufin);
             free(bufin);
         }
 

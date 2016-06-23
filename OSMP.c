@@ -38,20 +38,20 @@ int OSMP_Size(int *size)
     {
       return OSMP_ERROR;
     }
-
+   
   if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
-  
+
   struct osmp_info *osinfo = (struct osmp_info *)shm;
   *size = osinfo->processcount;
-
+  
   if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
-  
+
   return OSMP_SUCCESS;
 }
 
@@ -60,12 +60,12 @@ int OSMP_Rank(int *rank)
 
   if(shm == NULL || rank == NULL)
     return OSMP_ERROR;
-  
+
   if(sem_wait(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
-    }
-  
+    }  
+
   struct osmp_info *osinfo = (struct osmp_info*)shm;
   pid_t pid = getpid();
   
@@ -79,12 +79,12 @@ int OSMP_Rank(int *rank)
 	  break;
 	}
     }
-
+  
   if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
-    }
-  
+    }  
+
   return OSMP_SUCCESS;
 }
 
@@ -191,16 +191,17 @@ int OSMP_Send(const void *buf, int count, int dest)
 
 int OSMP_Recv(void *buf, int count,int *source, int *len)
 {
-  
-  
   if((count > OSMP_MAX_PAYLOAD_LENGTH)||(buf == NULL)||(count < 0))
-    return OSMP_ERROR;
+  	return OSMP_ERROR;
+  
   
   int rank;
   OSMP_Rank(&rank);
   int size;
   OSMP_Size(&size);
   
+  int x = semctl(semid,RECEIVED(rank),GETVAL);
+
   //Pruefen ob Nachricht fuer einen da ist
   if(sem_wait(RECEIVED(rank)) == OSMP_ERROR)
     {
@@ -258,11 +259,19 @@ int OSMP_Recv(void *buf, int count,int *source, int *len)
       return OSMP_ERROR;
     }
   
+  int l = semctl(semid,RECEIVED(rank)+size,GETVAL);
+  printf("Local: %d\n",l);
+
   //Shared Memory freigeben
   if(sem_signal(MUTEX) == OSMP_ERROR)
     {
       return OSMP_ERROR;
     }
+  int m = semctl(semid,MUTEX,GETVAL);
+  printf("Mutex: %d\n",m);
+
+  int g = semctl(semid,LIMIT,GETVAL);
+  printf("Global: %d\n",g);
   return OSMP_SUCCESS;
 }
 

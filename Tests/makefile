@@ -2,7 +2,10 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Wconversion -std=c11
 DEPS = 
 
-all: test0 test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
+all: clean test0 test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
+
+clean:
+	rm *.o
 
 test0: test0.o
 	$(CC) -o TEST0 test0.o ../OSMP.o ../keys.o

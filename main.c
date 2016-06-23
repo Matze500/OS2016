@@ -54,36 +54,36 @@ int main(int argc,char **argv)
       if(semid < 0)
 	{
 	  printf("\nSEMGET2: %s\n",strerror(errno));
-	  saveexit();
+	  return saveexit();
 	}
       if(semctl(semid,0,SETVAL,(int)1) == -1)
 	{
 	  printf("\nSEMCTL1: %s\n",strerror(errno));
-	  saveexit();
+	  return saveexit();
 	}
-      if(semctl(semid,1,SETVAL,(int)OSMP_MAX_SLOTS) == -1)
+      if(semctl(semid,1,SETVAL,(int)OSMP_MAX_SLOTS-1) == -1)
 	{
 	  printf("\nSEMCTL2: %s\n",strerror(errno));
-	  saveexit();
+	  return saveexit();
 	}
       for(count = 0;count < processcount;count++)
 	{
 	  if(semctl(semid,count+2,SETVAL,(int)0) == -1)
 	    {
 	      printf("\nSEMCTL3: %s\n",strerror(errno));
-	      saveexit();
+	      return saveexit();
 	    }
-	  if(semctl(semid,count+2+processcount,SETVAL,(int)OSMP_MAX_MESSAGES_PROC) == -1)
+	  if(semctl(semid,count+2+processcount,SETVAL,(int)OSMP_MAX_MESSAGES_PROC-1) == -1)
 	    {
 	      printf("\nSEMCTL4: %s\n",strerror(errno));
-	      saveexit();
+	      return saveexit();
 	    }
 	}
     }
   else
     {
       printf("\nID: %d SEMGET1: %s\n",semid,strerror(errno));
-      saveexit();
+      return saveexit();
     }
   
   struct shmid_ds shmid_struct, *buf;
@@ -93,7 +93,7 @@ int main(int argc,char **argv)
   if(shm == (void*)-1)
     {
       printf("\nSHMAT: %s\n",strerror(errno));
-      saveexit();
+      return saveexit();
     }
 
   //Erstellen der OSMP_Info
@@ -145,9 +145,11 @@ int main(int argc,char **argv)
   if(semop(semid,&sema,1) == -1)
     {
       free(osinfo);
-      saveexit();
+      return saveexit();
     }
   
+  printf("Start MUTEX: %d\n",semctl(semid,0,GETVAL));
+
   //Starten der Kindprozesse
   for(count = 0; count < processcount; count++)
     {
@@ -187,6 +189,8 @@ int main(int argc,char **argv)
       free(osinfo);
       saveexit();
     }
+
+  printf("Start MUTEX: %d\n",semctl(semid,0,GETVAL));
 
   printf("Warten auf Kinder\n");
   
@@ -235,7 +239,7 @@ int childroutine(char **argv)
   return EXIT_SUCCESS;
 }
 
-void saveexit(void)
+int saveexit(void)
 {
   int ret;
   
